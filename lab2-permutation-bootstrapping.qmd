@@ -40,7 +40,8 @@ soil
 # Group Pb concentrations by location_code (DL or YD), calculate grouped means
 soil_loc_means <- soil |> 
     summarize(pb_ppm_mean = mean(pb_ppm),
-                .by = location_code)
+                .by = location_code) |> 
+    arrange(location_code)
 
 # Calculate diff_means (DL - YD)
 diff_means = soil_loc_means$pb_ppm_mean[1] - soil_loc_means$pb_ppm_mean[2]
@@ -53,7 +54,8 @@ diff_means = soil_loc_means$pb_ppm_mean[1] - soil_loc_means$pb_ppm_mean[2]
 shuffle_soil <- soil |> 
     mutate(shuffle_location_code = sample(location_code)) |>
     summarize(pb_ppm_mean = mean(pb_ppm),
-                .by = shuffle_location_code)
+                .by = shuffle_location_code) |> 
+    arrange(shuffle_location_code)
 
 # Calculate diff_means (DL - YD)
 shuffle_diff_means <- shuffle_soil$pb_ppm_mean[1] - shuffle_soil$pb_ppm_mean[2]
@@ -69,7 +71,8 @@ shuffled_means <- replicate(1e4,{
                     shuffle_soil <- soil |> 
                         mutate(shuffle_location_code = sample(location_code)) |>
                         summarize(pb_ppm_mean = mean(pb_ppm),
-                                    .by = shuffle_location_code)
+                                    .by = shuffle_location_code) |> 
+                        arrange(shuffle_location_code)
 
                     # Calculate diff_means (DL - YD)
                     shuffle_soil$pb_ppm_mean[1] - shuffle_soil$pb_ppm_mean[2]
@@ -82,15 +85,51 @@ shuffled_means <- replicate(1e4,{
 # Plotting histogram (null distribution)
 tibble(shuffled_means) |> 
     ggplot(aes(shuffled_means)) + 
-    geom_histogram()
+    geom_histogram(binwidth = 5)
 
 ```
 
 ## Compare the observed to the null
 
 ```{r}
-
+tibble(diff_means = shuffled_means) |>
+  ggplot(aes(diff_means)) +
+  geom_histogram(binwidth = 5) +
+  geom_vline(xintercept = diff_means, color = "magenta", linewidth = 1.5)
 
 ```
 
+```{r}
+# Calculate pvalue
+pval <- mean(shuffled_means > diff_means)
+
+pval
+```
+
 ## Interpret your results
+
+We would reject the null hypothesis since the pval < 0.5 (threshold).
+
+# Claim 2: Neighborhoods north of the Exide plant were exposed to more lead than those south.
+
+## 1. Calculate observed value of the statistic
+
+```{r}
+ena_esa <- soil |>
+  mutate(area = str_sub(property_id, 1, 3)) |>
+  filter(area %in% c("ENA", "ESA"))
+
+area_summ <- ena_esa |>
+  summarize(mean_pb_ppm = mean(pb_ppm), .by = area) |>
+  arrange(area)
+
+obs_diff_means <- area_summ$mean_pb_ppm[1] - area_summ$mean_pb_ppm[2]
+
+obs_diff_means
+```
+
+## 2. Resample observations and recalculate the statistic
+
+```{r}
+
+```
