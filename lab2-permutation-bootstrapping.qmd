@@ -1,0 +1,96 @@
+---
+title: "Lab 2: Investigating claims using inference"
+subtitle: "Permutation and bootstrapping"
+format: html
+---
+
+# Background:
+
+See [EDS22 Lab 2](https://eds-222-stats-f26.github.io/course-materials/labs/lab2.html).
+
+**Claim 1:** Lead is elevated in the drip line compared to the rest of the yard.
+- Question Type: Yes/no?
+- Statistical Experiment: Permutation
+**Claim 2:** Neighborhoods north of the Exide plant were exposed to more lead than those south.
+- Question Type: How much?
+- Statistical Experiment: Bootstrapping
+
+```{r}
+library(tidyverse)
+set.seed(222)
+```
+
+```{r}
+# Load data from /courses/EDS222
+soil <- read_csv("/courses/EDS222/data/exide-soil-cores.csv")
+soil
+```
+
+# Claim 1: Lead is elevated in the drip line compared to the rest of the yard.
+
+## Hypotheses:
+
+**Null Hypothesis (H~0~):** There is no difference in lead (Pb) concentration in the drip line compared to the rest of the yard.
+
+**Alternative Hypothesis (H~A~):** The lead (Pb) concentration in the drip line is greater than the rest of the yard.
+
+## Calculate observed value of the statistic:
+
+```{r}
+# Group Pb concentrations by location_code (DL or YD), calculate grouped means
+soil_loc_means <- soil |> 
+    summarize(pb_ppm_mean = mean(pb_ppm),
+                .by = location_code)
+
+# Calculate diff_means (DL - YD)
+diff_means = soil_loc_means$pb_ppm_mean[1] - soil_loc_means$pb_ppm_mean[2]
+```
+
+## Shuffle the predictor variable and recalculate the statistic
+
+```{r}
+# Shuffle predictor variable (location_code)
+shuffle_soil <- soil |> 
+    mutate(shuffle_location_code = sample(location_code)) |>
+    summarize(pb_ppm_mean = mean(pb_ppm),
+                .by = shuffle_location_code)
+
+# Calculate diff_means (DL - YD)
+shuffle_diff_means <- shuffle_soil$pb_ppm_mean[1] - shuffle_soil$pb_ppm_mean[2]
+
+```
+
+## Repeat Shuffling
+
+```{r}
+# Replicate above shuffle 10K times (1e4)
+shuffled_means <- replicate(1e4,{
+                    # Shuffle predictor variable (location_code)
+                    shuffle_soil <- soil |> 
+                        mutate(shuffle_location_code = sample(location_code)) |>
+                        summarize(pb_ppm_mean = mean(pb_ppm),
+                                    .by = shuffle_location_code)
+
+                    # Calculate diff_means (DL - YD)
+                    shuffle_soil$pb_ppm_mean[1] - shuffle_soil$pb_ppm_mean[2]
+                    })
+
+#shuffled_means
+```
+
+```{r}
+# Plotting histogram (null distribution)
+tibble(shuffled_means) |> 
+    ggplot(aes(shuffled_means)) + 
+    geom_histogram()
+
+```
+
+## Compare the observed to the null
+
+```{r}
+
+
+```
+
+## Interpret your results

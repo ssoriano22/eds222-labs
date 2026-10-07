@@ -1,0 +1,117 @@
+---
+title: "Lab 1: Reliability of Soil Lead Measurements"
+subtitle: "Soil lead near the former Exide Technologies facility"
+format: html
+---
+
+# Background
+
+See [EDS22 Lab 1](https://eds-222-stats-f26.github.io/course-materials/labs/lab1.html).
+
+# Lab Activity
+
+```{r}
+library(tidyverse)
+```
+
+## 1. Read in the Data
+
+```{r}
+# Load data from /courses/EDS222
+soil <- read_csv("/courses/EDS222/data/exide-soil-cores.csv")
+soil
+```
+
+## 2. Distribution of soil core lead measurements
+
+```{r}
+ggplot(soil, aes(
+    x = pb_ppm
+)) +
+    geom_histogram(binwidth=20) +
+    theme_bw() +
+    xlim(0,3000) +
+    geom_vline(xintercept=80) +
+    geom_vline(xintercept=200) +
+    labs(title = "Histogram of Soil Core Variability", subtitle = "Individual Samples")
+```
+
+There is a single peak in this histogram roughly centered between 80 and 200 ppm.
+
+## 3. Distribution of property-level mean measurements
+
+```{r}
+soil_summary <- soil |> 
+    group_by(property_id) |> 
+    summarize(pb_ppm_mean = mean(pb_ppm),
+                pb_ppm_sd = sd(pb_ppm))
+                
+ggplot(soil_summary, aes(
+    x = pb_ppm_mean
+)) +
+    geom_histogram(binwidth=20) +
+    theme_bw() +
+    xlim(0,2000) +
+    geom_vline(xintercept=80) +
+    geom_vline(xintercept=200) +
+    labs(title = "Histogram of Soil Core Variability", subtitle = "Property Mean")
+```
+
+The distribution of the pb_ppm means looks similar to the individual soil core sample histogram shape, with the peak between 80 and 200 ppm. The mean histogram peak has slightly more values closer to the 200 ppm-value.
+
+## 4. Property-level variability
+
+```{r}
+ggplot(soil_summary, aes(
+    x = pb_ppm_sd
+)) +
+    geom_histogram(binwidth=20) +
+    theme_bw() +
+    labs(title = "Histogram of Soil Core Variability", subtitle = "Property SD")
+    #xlim(0,1500)
+```
+
+Based on this SD histogram (samples grouped by property), these soil pb_ppm measurements are fairly reliable since the single peak is close to 0. There is a slight tail extending to 1000 ppm, with some higher outliers.
+
+## 5. Lead measurements by location
+
+```{r}
+ggplot(soil, aes(
+    x = pb_ppm,
+    fill = location_code
+)) +
+    geom_histogram(binwidth=20) +
+    theme_bw() +
+    labs(title = "Histogram of Soil Core Variability", subtitle = "Individual Soil Core by Location Code") +
+    xlim(0,2000)
+```
+
+The drip line (DL) distribution and yard (YD) distributions of pb_ppm are similar in shape - unimodal and right-skewed with outliers extending past 1000 ppm. The DL data generally has higher sample counts than the YD data across all bins.
+
+## 6. Drip line vs. yard, at the property level
+
+```{r}
+soil_prop <- soil |> 
+    mutate(is_dripline = if_else(location_code == "DL", TRUE, FALSE)) |> 
+    group_by(property_id, is_dripline) |> 
+    summarize(pb_ppm_mean = mean(pb_ppm))
+
+soil_prop_wide <- pivot_wider(
+    soil_prop,
+    names_from = is_dripline,
+    values_from = pb_ppm_mean,
+    names_prefix = "dripline_"
+) |> 
+    mutate(pb_ppm_mean_diff = dripline_TRUE - dripline_FALSE)
+
+ggplot(soil_prop_wide, aes(
+    x = pb_ppm_mean_diff
+)) +
+    geom_histogram(binwidth = 20) +
+    theme_bw() +
+    labs(title = "Distribution of DL-YD Pb Mean Differences", subtitle = "By Property ID")
+```
+
+*Interpret your final plot from the perspective of reliability. If you’re estimating the representative soil lead concentration for a property, how does sample location affect measurement reliability? What do you think you should do with the data from different locations?*
+
+The histogram we generated comparing mean DL and YD Pb ppm soil concentration per property is unimodal, and centered roughyl around 0. This indicates very little difference between DL and YD Pb concentrations for each property, which is surprising given analyses we looked at earlier this week. It is possible that other variables besides property and location code have an effect on Pb_ppm concentration, and those are not captured in this histogram analysis.
