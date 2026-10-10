@@ -1,0 +1,106 @@
+---
+title: "EDS 222 Week 3 Tuesday (Lab)"
+subtitle: "Simulating data following a linear regression model"
+format: html
+---
+
+```{r}
+library(tidyverse)
+set.seed(222)
+theme_set(theme_bw())
+```
+
+Simulate data following a linear regression model.
+
+Example: the relationship between water temperature and the length of copepods.
+
+1. Choose parameters
+2. Simulate data
+3. Fit the model
+4. Intepret the model
+
+## Choose parameters
+
+Our model has three parameters: two betas and a sigma. Our simulation needs one more parameter, our sample size.
+
+```{r}
+beta_0 <- 3000 # intercept: length of a copepod (in um) when temp is 0 degC
+beta_1 <- -55 # slope: change in length per degC
+sigma <- 100 # standard deviation of the residuals, the "spread" of the points around the line
+n <- 50 # sample size
+```
+
+## Simulate data
+
+1. Simulate the _predictor_
+2. Calculate the _expected_
+3. Simulate the _response_
+4. Assemble a dataframe
+
+### Simulate the predictor
+
+For temperature _uniformly_ distributed random temps between 2 and 14 degC
+
+```{r}
+temp_c <- runif(n, min = 2, max = 14)
+```
+
+### Calculate the expected
+
+```{r}
+expected_length_um <- beta_0 + beta_1 * temp_c
+```
+
+### Simulate the response
+_
+The response is _normally_ distributed around the line
+
+```{r}
+length_um <- rnorm(n, mean = expected_length_um, sd = sigma) 
+# notice the mean is the _vector_ of expected values
+```
+
+### Assembling the data frame
+
+```{r}
+# create a tibble
+copepods <- tibble(temp_c, length_um)
+
+# visualize the data
+ggplot(copepods, aes(temp_c, length_um)) +
+    geom_point()
+```
+
+## Fit the model
+
+Use the `lm()` to fit a model. Specify the relationship between response and predictor with a _formula_.
+
+```{r}
+# length_um is responsing to temp_c
+copepod_lm <- lm(length_um ~ temp_c, data = copepods)
+```
+
+Done and done!
+
+## Interpret the model
+
+Inspect the coefficients using `summary()`
+
+```{r}
+summary(copepod_lm)
+```
+
+Use `sigma()` to get the model estimate of sigma
+
+```{r}
+sigma(copepod_lm)
+```
+
+## Recap
+
+When simulating data from a linear regression model:
+
+1. Choose our parameters (betas, sigma, n)
+2. Simulate our data (predictor, expected, response)
+3. Fit the model (lm())
+4. Interpret the model (summary(), sigma())
